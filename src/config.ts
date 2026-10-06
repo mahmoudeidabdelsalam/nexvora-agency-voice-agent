@@ -1,30 +1,33 @@
 import "dotenv/config";
 
-const requiredVariables = [
-  "LIVEKIT_URL",
-  "LIVEKIT_API_KEY",
-  "LIVEKIT_API_SECRET",
-  "OPENAI_API_KEY",
-] as const;
-
 export function loadConfig() {
-  const values = Object.fromEntries(
-    requiredVariables.map((name) => [name, process.env[name]?.trim()]),
-  );
-  const missing = requiredVariables.filter((name) => !values[name]);
+  const livekitUrl = process.env.LIVEKIT_URL?.trim();
+  const livekitApiKey = process.env.LIVEKIT_API_KEY?.trim();
+  const livekitApiSecret = process.env.LIVEKIT_API_SECRET?.trim();
 
-  if (missing.length > 0) {
-    throw new Error(`Missing required voice-agent environment variables: ${missing.join(", ")}`);
+  if (!livekitUrl || !livekitApiKey || !livekitApiSecret) {
+    throw new Error("LiveKit runtime credentials are missing");
   }
-  if (!values.LIVEKIT_URL?.startsWith("wss://")) {
+
+  if (!livekitUrl.startsWith("wss://")) {
     throw new Error("LIVEKIT_URL must be a secure wss:// LiveKit URL");
   }
 
   return {
-    livekitUrl: values.LIVEKIT_URL,
-    livekitApiKey: values.LIVEKIT_API_KEY,
-    livekitApiSecret: values.LIVEKIT_API_SECRET,
-    openAiApiKey: values.OPENAI_API_KEY,
-    agentName: process.env.AGENT_NAME?.trim() || "nexvora-assistant",
+    livekitUrl,
+    livekitApiKey,
+    livekitApiSecret,
+
+    ollamaBaseUrl:
+      process.env.OLLAMA_BASE_URL?.trim() ||
+      "http://localhost:11434/v1",
+
+    ollamaModel:
+      process.env.OLLAMA_MODEL?.trim() ||
+      "llama3.2",
+
+    agentName:
+      process.env.AGENT_NAME?.trim() ||
+      "nexvora-assistant",
   };
 }

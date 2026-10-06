@@ -1,4 +1,11 @@
-import { ServerOptions, cli, defineAgent, type JobContext, voice } from "@livekit/agents";
+import {
+  ServerOptions,
+  cli,
+  defineAgent,
+  inference,
+  type JobContext,
+  voice,
+} from "@livekit/agents";
 import * as openai from "@livekit/agents-plugin-openai";
 import { fileURLToPath } from "node:url";
 import { ARABIC_EG_PROMPT } from "./prompts/arabic-eg.js";
@@ -31,15 +38,17 @@ export default defineAgent({
 
     const assistant = new voice.Agent({ instructions });
     const session = new voice.AgentSession({
-      llm: new openai.realtime.RealtimeModel({
-        apiKey: config.openAiApiKey,
-        voice: "marin",
-        turnDetection: {
-          type: "semantic_vad",
-          eagerness: "medium",
-          create_response: true,
-          interrupt_response: true,
-        },
+      stt: new inference.STT({
+        model: "deepgram/nova-3",
+        language: isArabic ? "ar" : "en",
+      }),
+      llm: openai.LLM.withOllama({
+        model: config.ollamaModel,
+        baseURL: config.ollamaBaseUrl,
+      }),
+      tts: new inference.TTS({
+        model: "cartesia/sonic-3",
+        language: isArabic ? "ar" : "en",
       }),
     });
 
