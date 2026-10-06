@@ -6,7 +6,7 @@ import {
   type JobContext,
   voice,
 } from "@livekit/agents";
-import * as openai from "@livekit/agents-plugin-openai";
+import * as openaiCompatible from "@livekit/agents-plugin-openai";
 import { fileURLToPath } from "node:url";
 import { ARABIC_EG_PROMPT } from "./prompts/arabic-eg.js";
 import { ENGLISH_PROMPT } from "./prompts/english.js";
@@ -42,9 +42,9 @@ export default defineAgent({
         model: "deepgram/nova-3",
         language: isArabic ? "ar" : "en",
       }),
-      llm: openai.LLM.withOllama({
-        model: config.ollamaModel,
-        baseURL: config.ollamaBaseUrl,
+      llm: openaiCompatible.LLM.withGroq({
+        apiKey: config.groqApiKey,
+        model: config.groqModel,
       }),
       tts: new inference.TTS({
         model: "cartesia/sonic-3",
