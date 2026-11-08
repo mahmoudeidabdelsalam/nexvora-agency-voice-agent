@@ -34,11 +34,29 @@ export function loadConfig() {
     .replace(/^https:\/\//, "wss://")
     .replace(/^http:\/\//, "ws://");
 
+  const openaiApiKey = process.env.OPENAI_API_KEY?.trim() || undefined;
+  const requestedTts = process.env.TTS_PROVIDER?.trim().toLowerCase();
+  if (requestedTts === "openai" && !openaiApiKey) {
+    throw new Error(
+      "TTS_PROVIDER=openai requires OPENAI_API_KEY in the voice-agent runtime environment"
+    );
+  }
+  // OpenAI voice is the default whenever a key is available; Cartesia otherwise.
+  const ttsProvider: "openai" | "cartesia" =
+    requestedTts === "cartesia" ? "cartesia" : openaiApiKey ? "openai" : "cartesia";
+
   return {
     livekitUrl: normalizedLivekitUrl,
     livekitApiKey,
     livekitApiSecret,
     groqApiKey,
+    openaiApiKey,
+    ttsProvider,
+    openaiTtsModel: process.env.OPENAI_TTS_MODEL?.trim() || "gpt-4o-mini-tts",
+    openaiTtsVoice: process.env.OPENAI_TTS_VOICE?.trim() || "coral",
+    wordpressGraphqlUrl:
+      process.env.WORDPRESS_GRAPHQL_URL?.trim() ||
+      "https://cms.nexvoraagency.com/graphql",
     groqModel:
       process.env.GROQ_MODEL?.trim() || "qwen/qwen3.8-27b",
 
