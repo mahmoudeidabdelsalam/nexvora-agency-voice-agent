@@ -107,6 +107,18 @@ export default defineAgent({
       ttsTextTransforms: ["filter_markdown", "filter_emoji", brandNameTransform(isArabic)],
     });
 
+    // Diagnostics: errors from STT/LLM/TTS and state changes, never conversation content.
+    session.on(voice.AgentSessionEventTypes.Error, (event) => {
+      const source = event.source?.constructor?.name ?? "unknown";
+      console.error(`Nexvora session error from ${source}:`, event.error);
+    });
+    session.on(voice.AgentSessionEventTypes.AgentStateChanged, (event) => {
+      console.log(`Nexvora agent state: ${event.oldState} -> ${event.newState}`);
+    });
+    session.on(voice.AgentSessionEventTypes.FunctionToolsExecuted, () => {
+      console.log("Nexvora tool call executed");
+    });
+
     await session.start({ agent: assistant, room: ctx.room });
     await ctx.connect();
     session.generateReply({ instructions: greeting });
