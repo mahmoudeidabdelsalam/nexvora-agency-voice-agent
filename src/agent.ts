@@ -4,6 +4,7 @@ import {
   defineAgent,
   inference,
   llm,
+  tts,
   type JobContext,
   voice,
 } from "@livekit/agents";
@@ -31,17 +32,24 @@ function getLanguage(metadata: string): "en" | "ar-eg" {
 }
 
 function createTTS(isArabic: boolean) {
-  if (config.ttsProvider === "openai") {
-    return new openaiCompatible.TTS({
-      apiKey: config.openaiApiKey,
-      model: config.openaiTtsModel,
-      voice: config.openaiTtsVoice as openaiCompatible.TTSOptions["voice"],
-      instructions: openaiSpeechInstructions(isArabic),
-    });
-  }
-  return new inference.TTS({
+  const cartesia = new inference.TTS({
     model: "cartesia/sonic-3",
     language: isArabic ? "ar" : "en",
+  });
+  if (config.ttsProvider !== "openai") return cartesia;
+
+  const openai = new openaiCompatible.TTS({
+    apiKey: config.openaiApiKey,
+    model: config.openaiTtsModel,
+    voice: config.openaiTtsVoice as openaiCompatible.TTSOptions["voice"],
+    instructions: openaiSpeechInstructions(isArabic),
+  });
+  // If OpenAI fails (for example the account runs out of credits) fall back to
+  // Cartesia instead of leaving the visitor in silence. OpenAI is retried every 30 s.
+  return new tts.FallbackAdapter({
+    ttsInstances: [openai, cartesia],
+    maxRetryPerTTS: 1,
+    recoveryDelayMs: 30_000,
   });
 }
 
@@ -121,7 +129,13 @@ export default defineAgent({
 
     await session.start({ agent: assistant, room: ctx.room });
     await ctx.connect();
-    session.generateReply({ instructions: greeting });
+    // The LLM needs at least one user message in the context (Groq's chat template
+    // rejects a request without one), so the greeting is triggered by a short
+    // placeholder turn rather than by instructions alone.
+    session.generateReply({
+      userInput: isArabic ? "(الزائر فتح المحادثة الآن)" : "(The visitor just opened the chat.)",
+      instructions: greeting,
+    });
   },
 });
 
